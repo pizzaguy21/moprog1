@@ -127,7 +127,7 @@ class _AppSetScreenState extends State<AppSetScreen> {
                 isDarkMode = value;
               });
             },
-            activeColor: Color(0xFF4B61DD),
+            activeColor: const Color(0xFF4B61DD),
           ),
         ],
       ),

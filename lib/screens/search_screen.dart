@@ -3,6 +3,7 @@ import 'spain_course_screen.dart'; // Import SpainCourseScreen
 import 'japan_course_screen.dart'; // Import JapanCourseScreen
 import 'us_course_screen.dart'; // Import EnglishCourseScreen
 
+
 class SearchScreen extends StatelessWidget {
   const SearchScreen({Key? key}) : super(key: key);
 

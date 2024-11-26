@@ -16,12 +16,21 @@ dependencies:
   crypto: ^3.0.1
   fluttertoast: ^8.2.1
   http: ^1.2.2
+  translator: ^1.0.3
+
+  #carousel_slider: ^4.1.0
 
 flutter:
   assets:
     - assets/japan_flag.png
     - assets/us_flag.png
     - assets/spain_flag.png
+    - assets/image1.jpg
+    - assets/image2.jpg
+    - assets/image3.jpg
+    - assets/image4.jpg
+    - assets/image5.jpg
+    - assets/image6.jpg
   uses-material-design: true
 
 dev_dependencies:

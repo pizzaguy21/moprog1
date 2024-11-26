@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/email_otp.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -14,9 +13,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final bool _isLoading = false;
   String _errorMessage = '';
-  String _successMessage = '';
 
+  // Validasi format email
+  bool _isValidEmail(String email) {
+    String pattern =
+        r"^[a-zA-Z0-9.a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$";
+    RegExp regex = RegExp(pattern);
+    return regex.hasMatch(email);
+  }
+
+  // Validasi format password
+  bool _isValidPassword(String password) {
+    String pattern = r'^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$&*~]).{8,}$';
+    RegExp regex = RegExp(pattern);
+    return regex.hasMatch(password);
+  }
+
+  // Fungsi untuk signup
   Future<void> _signUp() async {
     try {
       if (_usernameController.text.isEmpty ||
@@ -28,69 +43,59 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
-      // Display loading indicator
+      if (!_isValidEmail(_emailController.text.trim())) {
+        setState(() {
+          _errorMessage = 'Please enter a valid email address.';
+        });
+        return;
+      }
+
+      if (!_isValidPassword(_passwordController.text.trim())) {
+        setState(() {
+          _errorMessage =
+              'Password must be at least 8 characters long, include an uppercase letter, a number, and a special character.';
+        });
+        return;
+      }
+
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Create user in Firebase Authentication
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      List<String> methods = await FirebaseAuth.instance
+          .fetchSignInMethodsForEmail(_emailController.text.trim());
 
-      // Save user data in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user?.uid)
-          .set({
-        'username': _usernameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'isVerified': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      if (methods.isNotEmpty) {
+        Navigator.pop(context);
+        setState(() {
+          _errorMessage = 'This email is already registered.';
+        });
+        return;
+      }
 
-      // Configure EmailOTP
-      EmailOTP.config(
-        appName: "Polylingo",
-        appEmail: "your-app-email@example.com", // Replace with your app's email
-        otpLength: 6,
-        otpType: OTPType.numeric,
-        expiry: 300000, // OTP valid for 5 minutes (in milliseconds)
-      );
+      bool otpSent =
+          await EmailOTP.sendOTP(email: _emailController.text.trim());
 
-      // Send OTP
-      bool otpSent = await EmailOTP.sendOTP(email: _emailController.text.trim());
-
-      // Close loading indicator
       Navigator.pop(context);
 
       if (otpSent) {
-        setState(() {
-          _successMessage =
-              'An OTP has been sent to ${_emailController.text.trim()}. Please check your email.';
-          _errorMessage = '';
-        });
-
-        // Navigate to verification screen
-        Navigator.pushNamed(context, '/verification', arguments: {
-          'email': _emailController.text.trim(),
-        });
+        print("Navigating to /verification with username: ${_usernameController.text.trim()}");
+          Navigator.pushNamed(context, '/verification', arguments: {
+            'username': _usernameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text.trim(),
+          });
       } else {
         setState(() {
           _errorMessage = 'Failed to send OTP. Please try again.';
-          _successMessage = '';
         });
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading indicator
-      print('Error during sign up: $e');
+      Navigator.pop(context);
       setState(() {
         _errorMessage = 'An error occurred: ${e.toString()}';
-        _successMessage = '';
       });
     }
   }
@@ -98,44 +103,55 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF4B61DD),
+      backgroundColor: const Color(0xFFEEF2F3),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
-              const SizedBox(height: 20),
-              const Center(
-                child: Text(
-                  'Polylingo',
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Header Section
+                const Text(
+                  "Create Account",
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Color(0xFF4B61DD),
                   ),
                 ),
-              ),
-              const SizedBox(height: 60),
-              Center(
-                child: Container(
+                const SizedBox(height: 10),
+                const Text(
+                  "Sign up to get started!",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+
+                // Form Section
+                Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
+                      // Username Field
                       TextField(
                         controller: _usernameController,
                         decoration: InputDecoration(
-                          labelText: 'Username',
+                          labelText: "Username",
+                          prefixIcon: const Icon(Icons.person),
                           filled: true,
-                          fillColor: const Color(0xFF4B61DD).withOpacity(0.1),
+                          fillColor: const Color(0xFFEEF2F3),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -143,12 +159,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       const SizedBox(height: 15),
+
+                      // Email Field
                       TextField(
                         controller: _emailController,
                         decoration: InputDecoration(
-                          labelText: 'Email Address',
+                          labelText: "Email Address",
+                          prefixIcon: const Icon(Icons.email),
                           filled: true,
-                          fillColor: const Color(0xFF4B61DD).withOpacity(0.1),
+                          fillColor: const Color(0xFFEEF2F3),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -156,13 +175,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       const SizedBox(height: 15),
+
+                      // Password Field
                       TextField(
                         controller: _passwordController,
                         obscureText: true,
                         decoration: InputDecoration(
-                          labelText: 'Password',
+                          labelText: "Password",
+                          prefixIcon: const Icon(Icons.lock),
                           filled: true,
-                          fillColor: const Color(0xFF4B61DD).withOpacity(0.1),
+                          fillColor: const Color(0xFFEEF2F3),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
@@ -170,42 +192,69 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       const SizedBox(height: 25),
+
+                      // Error Message
                       if (_errorMessage.isNotEmpty)
                         Text(
                           _errorMessage,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 14,
-                          ),
+                          style: const TextStyle(color: Colors.red),
                         ),
-                      if (_successMessage.isNotEmpty)
-                        Text(
-                          _successMessage,
-                          style: const TextStyle(
-                            color: Colors.green,
-                            fontSize: 14,
-                          ),
-                        ),
-                      const SizedBox(height: 25),
+                      const SizedBox(height: 15),
+
+                      // Sign Up Button
                       ElevatedButton(
-                        onPressed: _signUp,
+                        onPressed: _isLoading ? null : _signUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF4B61DD),
-                          minimumSize: const Size(double.infinity, 50),
+                          minimumSize: const Size(double.infinity, 50), // Lebarkan tombol
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
                         ),
-                        child: const Text(
-                          'Sign Up',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      )
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                "Sign Up",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold, // Tambahkan bold
+                                  color: Colors.white, // Pastikan warna putih
+                                ),
+                              ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                // Footer Section
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Already have an account?",
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      child: const Text(
+                        "Log In",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF4B61DD),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

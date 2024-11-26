@@ -3,13 +3,15 @@ import 'screens/landing_page.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/resetpw_screen.dart';
 import 'screens/favourites_screen.dart';
 import 'screens/personal_screen.dart';
 import 'screens/accsecurity_screen.dart';
 import 'screens/about_screen.dart';
 import 'screens/appset_screen.dart';
 import 'screens/verification_screen.dart';
+import 'screens/forgotpw_screen.dart';
+import 'screens/setnewpw_screen.dart';
+import 'screens/verifycodepw_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
@@ -18,6 +20,7 @@ void main() async {
 
   // Inisialisasi Firebase sebelum menjalankan aplikasi
   await Firebase.initializeApp();
+
 
   runApp(const PolylingoApp());
 }
@@ -65,20 +68,32 @@ class PolylingoApp extends StatelessWidget {
         '/landing': (context) => const LandingPage(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/resetpw': (context) => const ResetPwScreen(),
+        '/home': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          print("Arguments received for /home: $args");
+          if (args == null || !args.containsKey('username')) {
+            throw Exception("Missing 'username' argument for /home route.");
+          }
+          return HomeScreen(username: args['username']);
+        },
         '/favourites': (context) => const FavouritesScreen(),
         '/personal': (context) => const PersonalScreen(),
         '/accountSecurities': (context) => const AccountSecuritiesScreen(),
         '/about': (context) => const AboutScreen(),
         '/appSettings': (context) => const AppSetScreen(),
         '/verification': (context) {
-          // Mengambil parameter dari navigasi
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return VerificationScreen(
-            email: args['email'], // Passing email to verification screen
+            email: args['email'],  // Passing email argument to VerificationScreen
           );
         },
+        '/forgotpassword': (context) => const ForgotPasswordScreen(),
+        '/verify-code': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final email = args['email']; // Ambil nilai email dari Map
+          return VerifyCodePWScreen(email: email); // Passing email ke VerifyCodePWScreen
+        },
+        '/set-new-password': (context) => SetNewPasswordScreen(),
       },
       // Default page if the route does not exist
       onUnknownRoute: (settings) => MaterialPageRoute(

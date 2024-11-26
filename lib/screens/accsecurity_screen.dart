@@ -45,14 +45,14 @@ class _AccountSecuritiesScreenState extends State<AccountSecuritiesScreen> {
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: const Color(0xFF4B61DD), width: 2),
               ),
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.shield, color: Colors.black54),
-                      const SizedBox(width: 8),
-                      const Text(
+                      Icon(Icons.shield, color: Colors.black54),
+                      SizedBox(width: 8),
+                      Text(
                         'Security Level : ',
                         style: TextStyle(
                           fontSize: 16,
@@ -69,8 +69,8 @@ class _AccountSecuritiesScreenState extends State<AccountSecuritiesScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
+                  SizedBox(height: 10),
+                  Text(
                     'Set password and email verification to make accounts more secure and convenient',
                     style: TextStyle(fontSize: 14, color: Colors.black54),
                   ),
@@ -99,9 +99,9 @@ class _AccountSecuritiesScreenState extends State<AccountSecuritiesScreen> {
                   color: const Color(0xFFD6E4FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text(
                       'Not Yet Set',
                       style: TextStyle(color: Colors.red),
@@ -133,9 +133,9 @@ class _AccountSecuritiesScreenState extends State<AccountSecuritiesScreen> {
                   color: const Color(0xFFD6E4FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text(
                       'Not Yet Set',
                       style: TextStyle(color: Colors.red),

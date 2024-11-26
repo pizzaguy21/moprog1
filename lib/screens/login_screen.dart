@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,145 +12,187 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
   String _errorMessage = '';
 
-  // Function to hash the password
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
-  // Function to handle login
   Future<void> _login() async {
-    try {
-      // Get Firestore instance
-      final firestore = FirebaseFirestore.instance;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-      // Query Firestore for the user's email
-      final querySnapshot = await firestore
-          .collection('users')
-          .where('email', isEqualTo: _emailController.text.trim())
-          .get();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final userDoc = querySnapshot.docs.first;
-        final hashedPassword = _hashPassword(_passwordController.text.trim());
-
-        // Check if the hashed password matches the stored one
-        if (userDoc['password'] == hashedPassword) {
-          Navigator.pushReplacementNamed(context, '/home'); // Navigate to home on success
-        } else {
-          setState(() {
-            _errorMessage = 'Email or password is wrong';
-          });
-        }
-      } else {
-        setState(() {
-          _errorMessage = 'Email or password is wrong';
-        });
-      }
-    } catch (e) {
+    if (email.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'An error occurred: ${e.toString()}';
+        _errorMessage = 'Both fields are required.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      // Login ke Firebase
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      // Ambil UID pengguna
+      final String uid = userCredential.user!.uid;
+
+      // Ambil data pengguna dari Firestore
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final username = userDoc.data()?['username'];
+
+      if (username == null) {
+        setState(() {
+          _errorMessage = 'User data is incomplete.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      print("Login successful for user: $email with username: $username");
+
+      // Navigasi ke HomeScreen
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: {'username': username}, // Kirimkan username
+      );
+    } catch (e) {
+      print("Login failed: $e");
+      setState(() {
+        _errorMessage = 'Email or password is incorrect.';
+        _isLoading = false;
       });
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF4B61DD),
+      backgroundColor: const Color(0xFFEEF2F3),
       body: SafeArea(
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                
                 const Text(
-                  'Polylingo',
+                  "Polylingo",
                   style: TextStyle(
-                    fontSize: 36,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Color(0xFF4B61DD),
                   ),
                 ),
-                const SizedBox(height: 60),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 10),
+                const Text(
+                  "Please login to continue",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+
+                // Email Input
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _emailController,
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: const TextStyle(color: Color(0xFF4B61DD)),
-                          filled: true,
-                          fillColor: const Color(0xFF4B61DD).withOpacity(0.1),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          labelStyle: const TextStyle(color: Color(0xFF4B61DD)),
-                          filled: true,
-                          fillColor: const Color(0xFF4B61DD).withOpacity(0.1),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4B61DD),
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                        child: const Text(
+                ),
+                const SizedBox(height: 15),
+
+                // Password Input
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Login Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4B61DD),
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
                           'Login',
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
-                      ),
-                      const SizedBox(height: 15),
-                      if (_errorMessage.isNotEmpty)
-                        Text(
-                          _errorMessage,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      const SizedBox(height: 15),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/signup'),
-                        child: const Text(
-                          "Don't have an account? Sign up here!",
-                          style: TextStyle(color: Color(0xFF4B61DD)),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/verification'),
-                        child: const Text(
-                          "Forgot password?",
-                          style: TextStyle(color: Color(0xFF4B61DD)),
-                        ),
-                      ),
-                    ],
+                ),
+                const SizedBox(height: 15),
+
+                // Error Message
+                if (_errorMessage.isNotEmpty)
+                  Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.red),
                   ),
+
+                const SizedBox(height: 15),
+
+                // Forgot Password Link
+                GestureDetector(
+                  onTap: () {
+                    print("Forgot Password clicked!");
+                    Navigator.pushNamed(context, '/forgotpassword');
+                  },
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(
+                      color: Color(0xFF4B61DD),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Sign Up Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Don't have an account? "),
+                    GestureDetector(
+                      onTap: () {
+                        print("Sign Up clicked!");
+                        Navigator.pushNamed(context, '/signup');
+                      },
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          color: Color(0xFF4B61DD),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

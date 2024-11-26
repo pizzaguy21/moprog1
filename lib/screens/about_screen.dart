@@ -89,7 +89,7 @@ class AboutScreen extends StatelessWidget {
       } else if (title == 'Testimony') {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => TestimonyScreen()),
+          MaterialPageRoute(builder: (context) => const TestimonyScreen()),
         );
       }
       // Add more navigation if needed for other buttons in the future
