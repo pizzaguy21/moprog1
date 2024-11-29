@@ -67,18 +67,28 @@ class PolylingoApp extends StatelessWidget {
       routes: {
         '/landing': (context) => const LandingPage(),
         '/login': (context) => const LoginScreen(),
-        '/signup': (context) => const SignUpScreen(),
+        '/signup': (context) => const SignUpScreen(),        
         '/home': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          print("Arguments received for /home: $args");
-          if (args == null || !args.containsKey('username')) {
-            throw Exception("Missing 'username' argument for /home route.");
-          }
-          return HomeScreen(username: args['username']);
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
+          return HomeScreen(
+            username: args['username'],
+            email: args['email'],
+          );
         },
         '/favourites': (context) => const FavouritesScreen(),
         '/personal': (context) => const PersonalScreen(),
-        '/accountSecurities': (context) => const AccountSecuritiesScreen(),
+        '/accountSecurities': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+          if (args == null || !args.containsKey('email')) {
+            throw Exception("Email argument is required for this screen.");
+          }
+
+          return AccountSecuritiesScreen(
+            email: args['email'] ?? 'unknown@example.com', // Default jika null
+            phoneNumber: args['phoneNumber'], // Tetap nullable
+          );
+        },
         '/about': (context) => const AboutScreen(),
         '/appSettings': (context) => const AppSetScreen(),
         '/verification': (context) {

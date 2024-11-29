@@ -65,7 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacementNamed(
         context,
         '/home',
-        arguments: {'username': username}, // Kirimkan username
+        arguments: {
+          'username': username, // Pastikan username tersedia
+          'email': _emailController.text.trim(), // Ambil email dari controller
+        }, // Kirimkan username
       );
     } catch (e) {
       print("Login failed: $e");

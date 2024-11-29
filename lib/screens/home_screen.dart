@@ -5,8 +5,16 @@ import 'package:polylingo/screens/favourites_screen.dart';
 import 'package:polylingo/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String username; // Tambahkan username
-  const HomeScreen({super.key, required this.username});
+  final String username;
+  final String email;
+  final String? phoneNumber;
+
+  const HomeScreen({
+    super.key,
+    required this.username,
+    required this.email,
+    this.phoneNumber,
+  });
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -19,7 +27,11 @@ class _HomeScreenState extends State<HomeScreen> {
     HomeScreenContent(username: widget.username), // Teruskan username
     const SearchScreen(),
     const FavouritesScreen(),
-    const ProfileScreen(),
+    ProfileScreen(
+      username: widget.username, // Pastikan username diteruskan
+      userEmail: widget.email, // Pastikan email diteruskan
+      userPhoneNumber: widget.phoneNumber, // Pastikan phoneNumber diteruskan
+    ),
   ];
 
   void _onItemTapped(int index) {

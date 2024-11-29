@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import 'changepw_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final String username;
+  final String userEmail;
+  final String? userPhoneNumber;
+
+  const ProfileScreen({
+    super.key,
+    required this.username,
+    required this.userEmail,
+    this.userPhoneNumber,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +79,15 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
-                          Navigator.pushNamed(context, '/accountSecurities'); // Navigate to AccountSecuritiesScreen
+                          Navigator.pushNamed(
+                            context,
+                            '/accountSecurities',
+                            arguments: {
+                              'username': username, // Pastikan username ada
+                              'email': userEmail,
+                              'phoneNumber': userPhoneNumber,
+                            },
+                          );
                         },
                         child: const Text(
                           'Verify Profile',
@@ -131,7 +148,14 @@ class ProfileScreen extends StatelessWidget {
         if (title == 'Personal Info') {
           Navigator.pushNamed(context, '/personal');
         } else if (title == 'Account Securities') {
-          Navigator.pushNamed(context, '/accountSecurities'); 
+          Navigator.pushNamed(
+            context,
+            '/accountSecurities',
+            arguments: {
+              'email': userEmail, // Pastikan userEmail valid
+              'phoneNumber': userPhoneNumber, // Jika phoneNumber opsional, pastikan nullable
+            },
+          );
         } else if (title == 'About') {
           Navigator.pushNamed(context, '/about');
         } else if (title == 'Change Password') {
@@ -147,7 +171,7 @@ class ProfileScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: const Color(0xFFD6E4FF),
+          color: const Color.fromARGB(255, 178, 196, 252),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(

@@ -91,11 +91,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
           ),
         );
         print("Navigating to /home with username: $username");
-          Navigator.pushReplacementNamed(
-            context,
-            '/home',
-            arguments: {'username': username},
-          );
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: {
+          'username': username,
+            'email': email,
+          },
+        );
       } else {
         setState(() {
           _errorMessage = 'Invalid OTP. Please try again.';
