@@ -3,6 +3,10 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'quiz_english.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/favourites_provider.dart';
+import '../models/course_model.dart';
 
 class EnglishCoursePage extends StatefulWidget {
   @override
@@ -15,46 +19,70 @@ class _EnglishCoursePageState extends State<EnglishCoursePage> {
   List<Map<String, dynamic>> favoriteCourses = [];
   late List<bool> checkedStatus;
 
-  final List<Map<String, dynamic>> courses = [
-    {
-      'title': 'Basic Vocabulary',
-      'description': 'Build a strong foundation by learning essential vocabulary words that will help you understand basic ideas in your new language.',
-      'icon': Icons.language,
-      'link': 'https://youtu.be/F30R0tDIXP0?si=-a8DMIbPN_Md52Sy'
-    },
-    {
-      'title': 'Greetings & Introductions',
-      'description': 'Learn essential phrases for greeting others and introducing yourself with confidence.',
-      'icon': Icons.handshake,
-      'link': 'https://youtu.be/sp3xU5WvRjA?si=eKb1iyXg1_rTPsZ6'
-    },
-    {
-      'title': 'Basic Grammar',
-      'description': 'Understand fundamental grammar rules to form correct sentences.',
-      'icon': Icons.edit_note,
-      'link': 'https://youtu.be/QXVzmzhxWWc?si=EMLHXzHJi7iOHVhv'
-    },
-    {
-      'title': 'Pronunciation Tips',
-      'description': 'Get helpful tips to improve your pronunciation and sound more natural.',
-      'icon': Icons.record_voice_over,
-      'link': 'https://youtu.be/n4NVPg2kHv4?si=3oYZC_hIebAhB02r'
-    },
-    {
-      'title': 'Quiz',
-      'description': 'Let’s put your knowledge to the test!',
-      'icon': Icons.quiz,
-      'link': null
-    },
+  final List<Course> courses = [
+    Course(
+      id: '1',
+      title: 'Basic Vocabulary',
+      description: 'Build a strong foundation by learning essential vocabulary words that will help you understand basic ideas in your new language.',
+      icon: Icons.language,
+      link: 'https://youtu.be/F30R0tDIXP0?si=-a8DMIbPN_Md52Sy'
+    ),
+    Course(
+      id: '2',
+      title: 'Greetings & Introductions',
+      description: 'Learn essential phrases for greeting others and introducing yourself with confidence.',
+      icon: Icons.handshake,
+      link: 'https://youtu.be/sp3xU5WvRjA?si=eKb1iyXg1_rTPsZ6'
+    ),
+    Course(
+      id: '3',
+      title: 'Basic Grammar',
+      description: 'Understand fundamental grammar rules to form correct sentences.',
+      icon: Icons.edit_note,
+      link: 'https://youtu.be/QXVzmzhxWWc?si=EMLHXzHJi7iOHVhv'
+    ),
+    Course(
+      id: '4',
+      title: 'Pronunciation Tips',
+      description: 'Get helpful tips to improve your pronunciation and sound more natural.',
+      icon: Icons.record_voice_over,
+      link: 'https://youtu.be/n4NVPg2kHv4?si=3oYZC_hIebAhB02r'
+    ),
+    Course(
+      id: '5',
+      title: 'Quiz',
+      description: 'Let’s put your knowledge to the test!',
+      icon: Icons.quiz,
+      link: null
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
     checkedStatus = List<bool>.filled(courses.length, false);
-    _pageController =
-        PageController(viewportFraction: 0.8, initialPage: currentIndex);
+    _pageController = PageController(viewportFraction: 0.8, initialPage: currentIndex);
     _loadProgress();
+    _loadFavourites(); // Tambahkan ini
+  }
+
+  Future<void> _loadFavourites() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final favouritesProvider =
+        Provider.of<FavouritesProvider>(context, listen: false);
+
+    // Pastikan favorit dimuat dari Firebase
+    await favouritesProvider.loadFavourites(userId);
+
+    // Sinkronkan status favorit dengan daftar kursus
+    setState(() {
+      for (var course in courses) {
+        course.isFavourite = favouritesProvider.favourites
+            .any((fav) => fav.id == course.id);
+      }
+    });
   }
 
   @override
@@ -127,8 +155,30 @@ class _EnglishCoursePageState extends State<EnglishCoursePage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.favorite_border, color: Colors.white),
-                      onPressed: () {},
+                      icon: Icon(
+                        courses[currentIndex].isFavourite ? Icons.favorite : Icons.favorite_border,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        final userId = FirebaseAuth.instance.currentUser?.uid;
+
+                        if (userId != null) {
+                          setState(() {
+                            // Perbarui status lokal
+                            courses[currentIndex].isFavourite = !courses[currentIndex].isFavourite;
+                          });
+
+                          // Simpan atau hapus dari Firebase
+                          Provider.of<FavouritesProvider>(context, listen: false)
+                              .toggleFavourite(userId, courses[currentIndex]);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please log in to add to favourites!'),
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -197,19 +247,20 @@ class _EnglishCoursePageState extends State<EnglishCoursePage> {
                         return Transform.scale(
                           scale: index == currentIndex ? 1 : 0.9,
                           child: CourseCard(
-                            title: courses[index]['title']!,
-                            description: courses[index]['description']!,
-                            icon: courses[index]['icon'],
+                            title: courses[index].title,
+                            description: courses[index].description,
+                            icon: courses[index].icon ?? Icons.book,
                             isChecked: checkedStatus[index],
                             onChecked: (value) {
                               updateProgress(value, index);
                             },
-                            link: courses[index]['link'],
+                            link: courses[index].link,
                             onQuizPressed: index == courses.length - 1
                                 ? () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (context) => QuizPage()),
+                                      MaterialPageRoute(
+                                          builder: (context) => QuizPage()),
                                     );
                                   }
                                 : null,

@@ -3,8 +3,13 @@ import 'package:percent_indicator/linear_percent_indicator.dart';
 import 'quiz_japanese.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/favourites_provider.dart';
+import '../models/course_model.dart';
 
 class JapaneseCoursePage extends StatefulWidget {
+  
   @override
   _JapaneseCoursePageState createState() => _JapaneseCoursePageState();
 }
@@ -15,47 +20,75 @@ class _JapaneseCoursePageState extends State<JapaneseCoursePage> {
   List<Map<String, dynamic>> favoriteCourses = [];
   late List<bool> checkedStatus;
 
-  final List<Map<String, dynamic>> courses = [
-    {
-      'title': 'Hiragana & Katakana',
-      'description':
-          'Learn the basic Japanese alphabets to start your journey.',
-      'icon': Icons.book,
-      'link': 'https://youtu.be/hQzRdI14Z8g'
-    },
-    {
-      'title': 'Basic Greetings',
-      'description': 'Learn essential phrases to greet and introduce yourself.',
-      'icon': Icons.handshake,
-      'link': 'https://youtu.be/ql2qtZZOxsQ'
-    },
-    {
-      'title': 'Essential Grammar',
-      'description': 'Understand the fundamental grammar rules of Japanese.',
-      'icon': Icons.edit_note,
-      'link': 'https://youtu.be/k5w-F64P8mI'
-    },
-    {
-      'title': 'Pronunciation Tips',
-      'description': 'Get tips to pronounce Japanese words correctly.',
-      'icon': Icons.record_voice_over,
-      'link': 'https://youtu.be/aHwvTpByJX8'
-    },
-    {
-      'title': 'Quiz',
-      'description': 'Let’s put your knowledge to the test!',
-      'icon': Icons.quiz,
-      'link': null
-    },
+  final List<Course> courses = [
+    Course(
+      id: '1',
+      title: 'Hiragana & Katakana',
+      description: 'Learn the basic Japanese alphabets to start your journey.',
+      icon: Icons.book,
+      link: 'https://youtu.be/hQzRdI14Z8g',
+      isFavourite: false,
+    ),
+    Course(
+      id: '2',
+      title: 'Basic Greetings',
+      description: 'Learn essential phrases to greet and introduce yourself.',
+      icon: Icons.handshake,
+      link: 'https://youtu.be/ql2qtZZOxsQ',
+      isFavourite: false,
+    ),
+    Course(
+      id: '3',
+      title: 'Essential Grammar',
+      description: 'Understand the fundamental grammar rules of Japanese.',
+      icon: Icons.edit_note,
+      link: 'https://youtu.be/k5w-F64P8mI',
+      isFavourite: false,
+    ),
+    Course(
+      id: '4',
+      title: 'Pronunciation Tips',
+      description: 'Get tips to pronounce Japanese words correctly.',
+      icon: Icons.record_voice_over,
+      link: 'https://youtu.be/aHwvTpByJX8',
+      isFavourite: false,
+    ),
+    Course(
+      id: '5',
+      title: 'Quiz',
+      description: 'Let’s put your knowledge to the test!',
+      icon: Icons.quiz,
+      link: null,
+      isFavourite: false,
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
     checkedStatus = List<bool>.filled(courses.length, false);
-    _pageController =
-        PageController(viewportFraction: 0.8, initialPage: currentIndex);
+    _pageController = PageController(viewportFraction: 0.8, initialPage: currentIndex);
     _loadProgress();
+    _loadFavourites(); // Tambahkan ini
+  }
+
+  Future<void> _loadFavourites() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final favouritesProvider =
+        Provider.of<FavouritesProvider>(context, listen: false);
+
+    // Pastikan favorit dimuat dari Firebase
+    await favouritesProvider.loadFavourites(userId);
+
+    // Sinkronkan status favorit dengan daftar kursus
+    setState(() {
+      for (var course in courses) {
+        course.isFavourite = favouritesProvider.favourites
+            .any((fav) => fav.id == course.id);
+      }
+    });
   }
 
   @override
@@ -130,19 +163,28 @@ class _JapaneseCoursePageState extends State<JapaneseCoursePage> {
                     ),
                     IconButton(
                       icon: Icon(
-                        favoriteCourses.contains(courses[currentIndex])
-                            ? Icons.favorite
-                            : Icons.favorite_border,
+                        courses[currentIndex].isFavourite ? Icons.favorite : Icons.favorite_border,
                         color: Colors.white,
                       ),
                       onPressed: () {
-                        setState(() {
-                          if (favoriteCourses.contains(courses[currentIndex])) {
-                            favoriteCourses.remove(courses[currentIndex]);
-                          } else {
-                            favoriteCourses.add(courses[currentIndex]);
-                          }
-                        });
+                        final userId = FirebaseAuth.instance.currentUser?.uid;
+
+                        if (userId != null) {
+                          setState(() {
+                            // Perbarui status lokal
+                            courses[currentIndex].isFavourite = !courses[currentIndex].isFavourite;
+                          });
+
+                          // Simpan atau hapus dari Firebase
+                          Provider.of<FavouritesProvider>(context, listen: false)
+                              .toggleFavourite(userId, courses[currentIndex]);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Please log in to add to favourites!'),
+                            ),
+                          );
+                        }
                       },
                     ),
                   ],
@@ -213,21 +255,20 @@ class _JapaneseCoursePageState extends State<JapaneseCoursePage> {
                         return Transform.scale(
                           scale: index == currentIndex ? 1 : 0.9,
                           child: CourseCard(
-                            title: courses[index]['title']!,
-                            description: courses[index]['description']!,
-                            icon: courses[index]['icon'],
+                            title: courses[index].title,
+                            description: courses[index].description,
+                            icon: courses[index].icon ?? Icons.book,
                             isChecked: checkedStatus[index],
                             onChecked: (value) {
                               updateProgress(value, index);
                             },
-                            link: courses[index]['link'],
+                            link: courses[index].link,
                             onQuizPressed: index == courses.length - 1
                                 ? () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) =>
-                                              QuizJapanesePage()),
+                                          builder: (context) => QuizJapanesePage()),
                                     );
                                   }
                                 : null,
