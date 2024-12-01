@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InputTestiScreen extends StatelessWidget {
   InputTestiScreen({super.key});
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _thoughtsController = TextEditingController();
+
+  final CollectionReference testimonialsCollection =
+      FirebaseFirestore.instance.collection('testimonials');
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +30,6 @@ class InputTestiScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.g_translate, color: Colors.white),
             onPressed: () {
-              // Implement language switch functionality if needed
             },
           ),
         ],
@@ -83,14 +86,27 @@ class InputTestiScreen extends StatelessWidget {
                   Align(
                     alignment: Alignment.bottomRight,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // Return user input to the previous screen
+                      onPressed: () async {
                         if (_titleController.text.isNotEmpty &&
                             _thoughtsController.text.isNotEmpty) {
-                          Navigator.pop(context, {
-                            'title': _titleController.text,
-                            'content': _thoughtsController.text,
-                          });
+                          try {
+                            await testimonialsCollection.add({
+                              'title': _titleController.text,
+                              'content': _thoughtsController.text,
+                              'timestamp': FieldValue.serverTimestamp(),
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Testimonial added successfully!')),
+                            );
+
+                            _titleController.clear();
+                            _thoughtsController.clear();
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Please fill in both fields.')),

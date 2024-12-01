@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:polylingo/providers/favourites_provider.dart';
-import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,10 +59,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Muat data favorit dari Firebase
-      await Provider.of<FavouritesProvider>(context, listen: false)
-          .loadFavourites(uid);
-
       print("Login successful for user: $email with username: $username");
 
       // Navigasi ke HomeScreen
@@ -72,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
         context,
         '/home',
         arguments: {
-          'username': username,
-          'email': _emailController.text.trim(),
-        },
+          'username': username, // Pastikan username tersedia
+          'email': _emailController.text.trim(), // Ambil email dari controller
+        }, // Kirimkan username
       );
     } catch (e) {
       print("Login failed: $e");
